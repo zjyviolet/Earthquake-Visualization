@@ -82,52 +82,6 @@ st.markdown("""
 
 st.markdown("---")
 
-# --- Clean 'country' Field for Choropleth ---
-# Define a set of valid country names (customize as needed)
-valid_countries = {
-    "Vanuatu", "Argentina", "Colombia", "Indonesia", "Russia", "Papua New Guinea",
-    "Afghanistan", "Ecuador", "Tajikistan", "Turkey", "United States", "El Salvador",
-    "New Zealand", "Mexico", "Taiwan", "Philippines", "Brazil", "Peru", "Costa Rica",
-    "Iran", "Guatemala", "Canada", "Fiji"
-}
-
-# Define a mapping dictionary for keywords in location to standard country names
-location_to_country = {
-    "Sola": "Vanuatu",
-    "Intipucá": "El Salvador",
-    "Loncopué": "Argentina",
-    "Sand Point": "United States",
-    "Alaska Peninsula": "United States",
-    "Antigua": "Antigua and Barbuda",
-    "Codrington": "Antigua and Barbuda",
-    "Tonga": "Tonga",
-    "Fiji": "Fiji",
-    "Kermadec": "New Zealand",
-    "Teluk Dalam": "Indonesia",
-    "Hihifo": "Tonga",
-    "Kamchatka": "Russia",
-    "Central Turkey": "Turkey",
-    "Panama": "Panama",   # adjust if needed for border regions
-    # Add more mappings as necessary
-}
-
-def infer_country(row):
-    # If the country field is missing or not in valid_countries, try to infer from location.
-    country = row["country"]
-    if pd.isna(country) or (country not in valid_countries):
-        location = str(row["location"])
-        for keyword, mapped_country in location_to_country.items():
-            if keyword.lower() in location.lower():
-                return mapped_country
-        return "Unknown"
-    else:
-        return country
-
-# Apply cleaning to the 'country' column
-if "country" in df.columns:
-    df["country"] = df["country"].fillna("Unknown")
-    df["country"] = df.apply(infer_country, axis=1)
-
 # --- 2. Choropleth: Earthquake Distribution by Country (Log Scale) ---
 st.subheader("2. Choropleth: Earthquake Distribution by Country (Log Scale)")
 st.markdown("""
@@ -137,50 +91,102 @@ st.markdown("""
 - **Hover Data:** Shows the country name, original earthquake count, and average magnitude.  
 """)
 
-# Ensure that the grouped country data contains only recognized countries
-df_country = df.groupby("country", as_index=False).agg(
-    earthquake_count=("magnitude", "size"),
-    avg_magnitude=("magnitude", "mean")
-)
-df_country["log_count"] = np.log1p(df_country["earthquake_count"])
-df_country = df_country[df_country["country"].isin(valid_countries)]
+# Clean 'country' field:
+if "country" not in df.columns:
+    st.error("The dataset does not contain a 'country' column. Cannot create Choropleth map.")
+else:
+    df["country"] = df["country"].fillna("Unknown")
+    
+    # Create a mapping dictionary to standardize country names
+    country_mapping = {
+        "Russian Federation (the)": "Russia",
+        "Turkiye": "Turkey",
+        "United States of America": "United States",
+        "United Kingdom of Great Britain and Northern Ireland (the)": "United Kingdom",
+        # You can add more mappings as needed
+    }
+    df["country"] = df["country"].replace(country_mapping)
+    
+    # Define a set of valid country names recognized by Plotly
+    valid_countries = {
+        "Vanuatu", "Argentina", "Colombia", "Indonesia", "Russia",
+        "Papua New Guinea", "Afghanistan", "Ecuador", "Tajikistan", "Turkey",
+        "United States", "El Salvador", "New Zealand", "Mexico", "Taiwan",
+        "Philippines", "Brazil", "Peru", "Costa Rica", "Iran", "Guatemala",
+        "Canada", "Fiji"
+    }
+    
+    # If country is still not recognized, try to infer from location
+    def infer_country(row):
+        country = row["country"]
+        if country not in valid_countries:
+            loc = str(row["location"]).lower()
+            for keyword, mapped_country in {
+                "sola": "Vanuatu",
+                "intipucá": "El Salvador",
+                "loncopué": "Argentina",
+                "sand point": "United States",
+                "alaska peninsula": "United States",
+                "codrington": "Antigua and Barbuda",
+                "kermadec": "New Zealand",
+                "teluk dalam": "Indonesia",
+                "kamchatka": "Russia",
+                "central turkey": "Turkey",
+            }.items():
+                if keyword in loc:
+                    return mapped_country
+            return "Unknown"
+        else:
+            return country
 
-fig_choro = px.choropleth(
-    df_country,
-    locations="country",
-    locationmode="country names",
-    color="log_count",
-    hover_name="country",
-    hover_data={
-        "earthquake_count": True,
-        "avg_magnitude": True,
-        "log_count": False
-    },
-    color_continuous_scale="Viridis",
-    range_color=(df_country["log_count"].min(), df_country["log_count"].max()),
-    scope="world",
-    title="Global Earthquake Distribution by Country (Log Scale)"
-)
-
-# Increase map dimensions for better readability
-fig_choro.update_layout(
-    geo=dict(
-        showframe=False,
-        showcoastlines=True,
-        projection_type="natural earth"
-    ),
-    title_x=0.5,  # Center the title
-    height=600,   # Increase height
-    width=1200    # Increase width
-)
-
-st.plotly_chart(fig_choro, use_container_width=True)
+    df["country"] = df.apply(infer_country, axis=1)
+    
+    # Aggregate data by country for the choropleth map
+    df_country = df.groupby("country", as_index=False).agg(
+        earthquake_count=("magnitude", "size"),
+        avg_magnitude=("magnitude", "mean")
+    )
+    df_country["log_count"] = np.log1p(df_country["earthquake_count"])
+    
+    # Filter to include only valid country names
+    df_country = df_country[df_country["country"].isin(valid_countries)]
+    
+    fig_choro = px.choropleth(
+        df_country,
+        locations="country",
+        locationmode="country names",
+        color="log_count",
+        hover_name="country",
+        hover_data={
+            "earthquake_count": True,
+            "avg_magnitude": True,
+            "log_count": False
+        },
+        color_continuous_scale="Viridis",
+        range_color=(df_country["log_count"].min(), df_country["log_count"].max()),
+        scope="world",
+        title="Global Earthquake Distribution by Country (Log Scale)"
+    )
+    
+    # Increase map dimensions for better readability
+    fig_choro.update_layout(
+        geo=dict(
+            showframe=False,
+            showcoastlines=True,
+            projection_type="natural earth"
+        ),
+        title_x=0.5,  # Center the title
+        height=600,   # Increase height
+        width=1200    # Increase width
+    )
+    
+    st.plotly_chart(fig_choro, use_container_width=True)
     
 st.markdown("""  
 **Interpretation:**  
 - Darker colored countries indicate a higher frequency of earthquakes.  
-- Hovering over a country displays detailed statistics, including the average magnitude, which helps assess overall seismic intensity.  
-- The log transformation helps differentiate regions with relatively low but nonzero earthquake counts.
+- Interactive tooltips display detailed statistics, including the average magnitude, helping assess overall seismic intensity.  
+- The log transformation differentiates regions with relatively low but nonzero earthquake counts.
 """)
 
 # Add Author Name
