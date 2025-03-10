@@ -18,13 +18,31 @@ Below you will find **two** interactive visualizations that provide different pe
 """)
 
 
-# 读取 CSV 数据后，显示数据形状
 try:
     df = pd.read_csv("earthquake_1995-2023.csv")
     st.write("CSV 数据加载成功，形状为：", df.shape)
 except Exception as e:
-    st.error("读取 CSV 数据失败：{}".format(e))
+    st.error("读取 CSV 数据失败: {}".format(e))
     st.stop()
+
+# 显示数据框架前 5 行
+st.write("数据预览：")
+st.dataframe(df.head())
+
+# 显示所有列名
+st.write("数据中的列：", df.columns.tolist())
+
+# 检查 'country' 列是否存在，并显示其唯一值
+if "country" in df.columns:
+    st.write("country 列的唯一值：", df["country"].unique())
+else:
+    st.error("数据中没有 'country' 列。")
+
+# 检查 'location' 列是否存在，并显示其唯一值
+if "location" in df.columns:
+    st.write("location 列的唯一值：", df["location"].unique())
+else:
+    st.error("数据中没有 'location' 列。")
 
 
 
