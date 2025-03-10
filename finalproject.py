@@ -18,17 +18,14 @@ Below you will find **two** interactive visualizations that provide different pe
 """)
 
 
-# 显示原始数据的前5行
-st.write("原始数据预览：")
-st.dataframe(df.head())
+# 读取 CSV 数据后，显示数据形状
+try:
+    df = pd.read_csv("earthquake_1995-2023.csv")
+    st.write("CSV 数据加载成功，形状为：", df.shape)
+except Exception as e:
+    st.error("读取 CSV 数据失败：{}".format(e))
+    st.stop()
 
-# 显示 country 列的唯一值，便于检查是否已经标准化
-if "country" in df.columns:
-    st.write("Country 列的唯一值：", df["country"].unique())
-
-# 显示 location 列的唯一值，帮助检查哪些位置可能需要映射
-if "location" in df.columns:
-    st.write("Location 列的唯一值：", df["location"].unique())
 
 
 
