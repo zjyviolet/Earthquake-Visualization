@@ -7,7 +7,6 @@ import numpy as np
 st.set_page_config(page_title="Earthquake Data Visualization", page_icon=":bar_chart:", layout="wide")
 
 st.title("Earthquake Data Visualization")
-# Display the dataset source at the top
 st.markdown("### **Source of Data:** [Kaggle Earthquake Dataset](https://www.kaggle.com/datasets/warcoder/earthquake-dataset)")
 
 st.markdown("""
@@ -17,64 +16,25 @@ Below you will find **two** interactive visualizations that provide different pe
 2. **Choropleth Map:** Shows the global distribution of earthquakes by country.
 """)
 
-
-
-
-
-
-# Read CSV data
+# 读取 CSV 数据
 df = pd.read_csv("earthquake_1995-2023.csv")
 
-
-import streamlit as st
-import pandas as pd
-
-# 读取 CSV 数据
-try:
-    df = pd.read_csv("earthquake_1995-2023.csv")
-    st.write("CSV 数据加载成功，数据形状为：", df.shape)
-except Exception as e:
-    st.error("读取 CSV 数据失败：{}".format(e))
-    st.stop()
-
-# 显示数据预览（前 5 行）
-st.write("数据预览（前 5 行）：")
-st.dataframe(df.head())
-
-# 显示数据中的所有列
-st.write("数据中的列：", df.columns.tolist())
-
-# 检查 country 列的唯一值
-if "country" in df.columns:
-    st.write("country 列的唯一值：", df["country"].dropna().unique())
-else:
-    st.error("数据中没有 'country' 列。")
-
-# 检查 location 列的唯一值
-if "location" in df.columns:
-    st.write("location 列的唯一值：", df["location"].dropna().unique())
-else:
-    st.error("数据中没有 'location' 列。")
-
-
-
-
-# Check for required columns in the dataset
+# 检查必要列
 required_columns = ["magnitude", "depth", "sig", "mmi", "date_time", "location"]
 missing_cols = [col for col in required_columns if col not in df.columns]
 if missing_cols:
     st.error(f"The dataset is missing the following required columns: {missing_cols}")
     st.stop()
 else:
-    # Convert columns to numeric
+    # 转换数值型字段
     df["magnitude"] = pd.to_numeric(df["magnitude"], errors="coerce")
     df["depth"] = pd.to_numeric(df["depth"], errors="coerce")
     df["sig"] = pd.to_numeric(df["sig"], errors="coerce")
     df["mmi"] = pd.to_numeric(df["mmi"], errors="coerce")
     
-    # Convert date_time to datetime and create a 'year' column for animation
+    # 转换时间，并提取年份
     df["date_time"] = pd.to_datetime(df["date_time"], errors="coerce")
-    df["year"] = df["date_time"].dt.year  # Extract year
+    df["year"] = df["date_time"].dt.year
 
 st.markdown("---")
 
@@ -89,7 +49,7 @@ st.markdown("""
 - **Animation Slider:** Filters data by year  
 """)
 
-# Create an animated scatter plot
+# 创建动画气泡图
 fig = px.scatter(
     df,
     x="magnitude",
@@ -104,12 +64,7 @@ fig = px.scatter(
     title="Earthquake: Magnitude vs. Depth (Animated by Year)",
     template="plotly_white"
 )
-
-fig.update_layout(
-    xaxis_title="Magnitude",
-    yaxis_title="Depth (km)"
-)
-
+fig.update_layout(xaxis_title="Magnitude", yaxis_title="Depth (km)")
 st.plotly_chart(fig, use_container_width=True)
 
 st.markdown(""" 
@@ -130,48 +85,54 @@ st.markdown("""
 - **Hover Data:** Shows the country name, original earthquake count, and average magnitude.  
 """)
 
-# Clean 'country' field:
+# 清洗 country 字段
 if "country" not in df.columns:
     st.error("The dataset does not contain a 'country' column. Cannot create Choropleth map.")
 else:
     df["country"] = df["country"].fillna("Unknown")
     
-    # Create a mapping dictionary to standardize country names
+    # 标准化国家名称映射
     country_mapping = {
         "Russian Federation (the)": "Russia",
         "Turkiye": "Turkey",
         "United States of America": "United States",
-        "United Kingdom of Great Britain and Northern Ireland (the)": "United Kingdom",
-        # Add more mappings as needed
+        "United Kingdom of Great Britain and Northern Ireland (the)": "United Kingdom"
     }
     df["country"] = df["country"].replace(country_mapping)
     
-    # Define a set of valid country names recognized by Plotly
+    # 定义 Plotly 识别的有效国家列表（根据你的数据，这里直接用 CSV 中的唯一值，必要时扩充或修改）
     valid_countries = {
-        "Vanuatu", "Argentina", "Colombia", "Indonesia", "Russia",
-        "Papua New Guinea", "Afghanistan", "Ecuador", "Tajikistan", "Turkey",
-        "United States", "El Salvador", "New Zealand", "Mexico", "Taiwan",
-        "Philippines", "Brazil", "Peru", "Costa Rica", "Iran", "Guatemala",
-        "Canada", "Fiji"
+        "Afghanistan", "Algeria", "Antarctica", "Argentina", "Azerbaijan", "Bolivia",
+        "Botswana", "Brazil", "Canada", "Chile", "Colombia", "Costa Rica", "Ecuador",
+        "El Salvador", "Fiji", "Greece", "Guatemala", "Haiti", "Iceland", "India",
+        "Indonesia", "Iran", "Italy", "Japan", "Kyrgyzstan", "Martinique", "Mexico",
+        "Mongolia", "Mozambique", "Myanmar", "Nepal", "New Zealand", "Nicaragua",
+        "Pakistan", "Panama", "Papua New Guinea", "People's Republic of China", "Peru",
+        "Philippines", "Russia", "Saudi Arabia", "Solomon Islands", "South Georgia and the South Sandwich Islands",
+        "Taiwan", "Tajikistan", "Tanzania", "Tonga", "Trinidad and Tobago", "Turkey", "Turkiye",
+        "Turkmenistan", "United Kingdom of Great Britain and Northern Ireland (the)",
+        "United States of America", "Vanuatu", "Venezuela"
     }
     
-    # If country is still not recognized, try to infer from location
+    # 如果 country 不在有效列表内，尝试从 location 推断
     def infer_country(row):
         country = row["country"]
         if country not in valid_countries:
             loc = str(row["location"]).lower()
-            for keyword, mapped_country in {
+            # 关键字映射，可根据需要扩展
+            mapping = {
                 "sola": "Vanuatu",
                 "intipucá": "El Salvador",
                 "loncopué": "Argentina",
                 "sand point": "United States",
                 "alaska peninsula": "United States",
-                "codrington": "Antigua and Barbuda",
+                "codrington": "Antarctica",  # 此处示例：请根据实际情况调整
                 "kermadec": "New Zealand",
                 "teluk dalam": "Indonesia",
                 "kamchatka": "Russia",
-                "central turkey": "Turkey",
-            }.items():
+                "central turkey": "Turkey"
+            }
+            for keyword, mapped_country in mapping.items():
                 if keyword in loc:
                     return mapped_country
             return "Unknown"
@@ -180,17 +141,20 @@ else:
 
     df["country"] = df.apply(infer_country, axis=1)
     
-    # Aggregate data by country for the choropleth map
+    # 显示清洗后的 country 唯一值，便于调试
+    st.write("清洗后的 country 唯一值：", df["country"].unique())
+    
+    # 聚合数据，用于 choropleth
     df_country = df.groupby("country", as_index=False).agg(
         earthquake_count=("magnitude", "size"),
         avg_magnitude=("magnitude", "mean")
     )
     df_country["log_count"] = np.log1p(df_country["earthquake_count"])
     
-    # Filter to include only valid country names
+    # 保留有效国家的数据
     df_country = df_country[df_country["country"].isin(valid_countries)]
     
-    # Remove explicit color_continuous_scale to use Plotly's default color code
+    # 使用 Plotly 默认颜色方案（不指定 color_continuous_scale）
     fig_choro = px.choropleth(
         df_country,
         locations="country",
@@ -202,22 +166,21 @@ else:
             "avg_magnitude": True,
             "log_count": False
         },
-        # Removed color_continuous_scale parameter for default colors
         range_color=(df_country["log_count"].min(), df_country["log_count"].max()),
         scope="world",
         title="Global Earthquake Distribution by Country (Log Scale)"
     )
     
-    # Increase map dimensions for better readability
+    # 调整地图尺寸以提高可读性
     fig_choro.update_layout(
         geo=dict(
             showframe=False,
             showcoastlines=True,
             projection_type="natural earth"
         ),
-        title_x=0.5,  # Center the title
-        height=600,   # Increase height
-        width=1200    # Increase width
+        title_x=0.5,
+        height=600,
+        width=1200
     )
     
     st.plotly_chart(fig_choro, use_container_width=True)
@@ -225,7 +188,7 @@ else:
 st.markdown("""  
 **Interpretation:**  
 - Darker colored countries indicate a higher frequency of earthquakes.  
-- Interactive tooltips display detailed statistics, including the average magnitude, helping assess overall seismic intensity.  
+- Interactive tooltips display detailed statistics, including the average magnitude, which helps assess overall seismic intensity.  
 - The log transformation differentiates regions with relatively low but nonzero earthquake counts.
 """)
 
