@@ -96,15 +96,24 @@ if "country" not in df.columns:
     st.error("The dataset does not contain a 'country' column. Cannot create Choropleth map.")
 else:
     df["country"] = df["country"].fillna("Unknown")
+    # Aggregate data by country
     df_country = df.groupby("country", as_index=False).agg(
         earthquake_count=("magnitude", "size"),
         avg_magnitude=("magnitude", "mean")
     )
-
+    
     # Create a new column for the log-transformed earthquake counts
     df_country["log_count"] = np.log1p(df_country["earthquake_count"])
 
-    # Use log_count for the color scale
+    # Define a set of valid country names (customize as needed)
+    valid_countries = {
+        "Vanuatu", "Argentina", "Colombia", "Papua New Guinea", "Afghanistan",
+        "Ecuador", "Russia", "Indonesia", "Tajikistan", "Turkey", "New Zealand"
+    }
+    # Drop rows with unrecognized country names
+    df_country = df_country[df_country["country"].isin(valid_countries)]
+
+    # Use log_count for the color scale in the choropleth map
     fig_choro = px.choropleth(
         df_country,
         locations="country",
@@ -122,7 +131,7 @@ else:
         title="Global Earthquake Distribution by Country (Log Scale)"
     )
 
-    # **Modify Layout to Increase Map Size**
+    # Increase map dimensions for better readability
     fig_choro.update_layout(
         geo=dict(
             showframe=False,
@@ -130,8 +139,8 @@ else:
             projection_type="natural earth"
         ),
         title_x=0.5,  # Center the title
-        height=600,   # **Increase height**
-        width=1200    # **Increase width**
+        height=600,   # Increase height
+        width=1200    # Increase width
     )
 
     st.plotly_chart(fig_choro, use_container_width=True)
@@ -139,9 +148,9 @@ else:
 st.markdown("""  
 **Interpretation:**  
 - Darker colored countries indicate a higher frequency of earthquakes.  
-- Hovering over a country displays detailed statistics, including the average magnitude, which helps assess the overall seismic intensity.  
+- Hovering over a country displays detailed statistics, including the average magnitude, which helps assess overall seismic intensity.  
 - Using a log transform helps differentiate regions with relatively low but nonzero earthquake counts, avoiding an overly uniform map.
 """)
 
-# **Add Author Name**
+# Add Author Name
 st.markdown("### Created by: Jiayi Zeng")
