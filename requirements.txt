@@ -1,4 +1,4 @@
 streamlit==1.26.0
 pandas==1.5.3
-numpy==1.23.5
+numpy>=1.24  # Use a version that does not rely on distutils
 plotly==5.14.1
