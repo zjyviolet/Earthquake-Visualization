@@ -178,5 +178,4 @@ st.markdown("""
 - The log transformation differentiates regions with relatively low but nonzero earthquake counts.
 """)
 
-# Add Author Name
 st.markdown("### Created by: Jiayi Zeng")
