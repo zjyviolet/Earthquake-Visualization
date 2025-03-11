@@ -3,11 +3,11 @@ import plotly.express as px
 import pandas as pd
 import numpy as np
 
-# Set page configuration
+
 st.set_page_config(page_title="Earthquake Data Visualization", page_icon=":bar_chart:", layout="wide")
 
 st.title("Earthquake Data Visualization")
-# Display the dataset source at the top
+
 st.markdown("### **Source of Data:** [Kaggle Earthquake Dataset](https://www.kaggle.com/datasets/warcoder/earthquake-dataset)")
 
 st.markdown("""
@@ -17,29 +17,28 @@ Below you will find **two** interactive visualizations that provide different pe
 2. **Choropleth Map:** Shows the global distribution of earthquakes by country.
 """)
 
-# Read CSV data
+
 df = pd.read_csv("earthquake_1995-2023.csv")
 
-# Check for required columns in the dataset
+
 required_columns = ["magnitude", "depth", "sig", "mmi", "date_time", "location"]
 missing_cols = [col for col in required_columns if col not in df.columns]
 if missing_cols:
     st.error(f"The dataset is missing the following required columns: {missing_cols}")
     st.stop()
 else:
-    # Convert columns to numeric
+
     df["magnitude"] = pd.to_numeric(df["magnitude"], errors="coerce")
     df["depth"] = pd.to_numeric(df["depth"], errors="coerce")
     df["sig"] = pd.to_numeric(df["sig"], errors="coerce")
     df["mmi"] = pd.to_numeric(df["mmi"], errors="coerce")
     
-    # Convert date_time to datetime and create a 'year' column for animation
+
     df["date_time"] = pd.to_datetime(df["date_time"], errors="coerce")
-    df["year"] = df["date_time"].dt.year  # Extract year
+    df["year"] = df["date_time"].dt.year  
 
 st.markdown("---")
 
-# --- 1. Animated Bubble Plot: Magnitude vs. Depth Over Time ---
 st.subheader("1. Animated Bubble Plot: Magnitude vs. Depth Over Time")
 st.markdown("""
 **Chart Description:**  
@@ -50,7 +49,6 @@ st.markdown("""
 - **Animation Slider:** Filters data by year  
 """)
 
-# Create an animated scatter plot
 fig = px.scatter(
     df,
     x="magnitude",
@@ -82,7 +80,6 @@ st.markdown("""
 
 st.markdown("---")
 
-# --- 2. Choropleth: Earthquake Distribution by Country (Log Scale) ---
 st.subheader("2. Choropleth: Earthquake Distribution by Country (Log Scale)")
 st.markdown("""
 **Chart Description:**  
@@ -91,23 +88,19 @@ st.markdown("""
 - **Hover Data:** Shows the country name, original earthquake count, and average magnitude.  
 """)
 
-# Clean 'country' field:
 if "country" not in df.columns:
     st.error("The dataset does not contain a 'country' column. Cannot create Choropleth map.")
 else:
     df["country"] = df["country"].fillna("Unknown")
     
-    # Create a mapping dictionary to standardize country names
     country_mapping = {
         "Russian Federation (the)": "Russia",
         "Turkiye": "Turkey",
         "United States of America": "United States",
         "United Kingdom of Great Britain and Northern Ireland (the)": "United Kingdom",
-        # You can add more mappings as needed
     }
     df["country"] = df["country"].replace(country_mapping)
     
-    # Define a set of valid country names recognized by Plotly
     valid_countries = {
         "Vanuatu", "Argentina", "Colombia", "Indonesia", "Russia",
         "Papua New Guinea", "Afghanistan", "Ecuador", "Tajikistan", "Turkey",
@@ -116,7 +109,6 @@ else:
         "Canada", "Fiji"
     }
     
-    # If country is still not recognized, try to infer from location
     def infer_country(row):
         country = row["country"]
         if country not in valid_countries:
@@ -141,14 +133,12 @@ else:
 
     df["country"] = df.apply(infer_country, axis=1)
     
-    # Aggregate data by country for the choropleth map
     df_country = df.groupby("country", as_index=False).agg(
         earthquake_count=("magnitude", "size"),
         avg_magnitude=("magnitude", "mean")
     )
     df_country["log_count"] = np.log1p(df_country["earthquake_count"])
     
-    # Filter to include only valid country names
     df_country = df_country[df_country["country"].isin(valid_countries)]
     
     fig_choro = px.choropleth(
@@ -168,16 +158,15 @@ else:
         title="Global Earthquake Distribution by Country (Log Scale)"
     )
     
-    # Increase map dimensions for better readability
     fig_choro.update_layout(
         geo=dict(
             showframe=False,
             showcoastlines=True,
             projection_type="natural earth"
         ),
-        title_x=0.5,  # Center the title
-        height=600,   # Increase height
-        width=1200    # Increase width
+        title_x=0.5, 
+        height=600,  
+        width=1200  
     )
     
     st.plotly_chart(fig_choro, use_container_width=True)
